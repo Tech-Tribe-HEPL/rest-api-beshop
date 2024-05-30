@@ -25,7 +25,10 @@
 				"wholroyd.jinja"
 			]
 		}
-	}
+	},
+	"mounts": [
+		"source=.,target=/app/,type=bind"
+	]
 
 	// Features to add to the dev container. More info: https://containers.dev/features.
 	// "features": {},
