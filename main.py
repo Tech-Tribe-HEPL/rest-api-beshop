@@ -9,6 +9,7 @@ import psycopg
 import os
 import logging
 import io
+from flask import request
 
 class DatabaseConnection:
     # Singleton pattern
@@ -55,24 +56,8 @@ def create_app():
     app.logger.setLevel(logging.DEBUG) 
     app.logger.info("Init the application.")
     # This route return an inventory of available products
-    @app.get('/pic/<int:id>')
-    def index():
-        conn = db.get_connection()
-        # TODO: Check if this method is vulnerable to SQL Injection
-        user_uuid = "123456789012" # TODO: Extract from JWT token
-        cur = conn.cursor()
-        cur.execute("""
-                                SELECT image FROM nationalfurniture 
-                                """)
-        mview = cur.fetchone(); # https://stackoverflow.com/questions/40049046/how-to-read-and-insert-bytea-columns-using-psycopg2
-        mview = cur.fetchone()
-        if not mview:
-            return "Image not found", 404
-        new_bin_data = mview[0]
-        return send_file(io.BytesIO(new_bin_data), mimetype='image/png')
-    
     @app.get('/')
-    def get_medical(id):
+    def index(id):
         #Obtain get_connection
         conn = db.get_connection()
         cur = conn.cursor()
@@ -90,12 +75,28 @@ def create_app():
             
         #parse the content into
         return flask.jsonify(content)
-
-    return app
+        
+    @app.get('/pic/<int:id>')
+    @app.output()
+    def get_pic():
+        conn = db.get_connection()
+        # NOTE: Check if this method is vulnerable to SQL Injection -> No user control over this query so it is safe
+        flask.request.args.get('id')
+        cur = conn.cursor()
+        cur.execute("""
+                        SELECT image FROM nationalfurniture 
+                        WHERE id = %s
+                        """,(id,))
+        mview = cur.fetchone()
+        if not mview:
+            return "Image not found", 404
+        new_bin_data = mview[0]
+        return send_file(io.BytesIO(new_bin_data), mimetype='image/png')
 
     # Add route to handle transactions
+    return app
 
-app = create_app() 
+app = create_app()
 
 if __name__ == "__main__":
     from gunicorn.main import run  # Assuming Gunicorn is installed
